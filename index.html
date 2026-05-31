@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raku's 2026 LCK &amp; LPL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:      #3d2878;
+  --ball:    #8577aa;
+  --ball-bd: #5a4280;
+  --pill:    #6a5e90;
+  --text:    #f0eaff;
+  --dim:     #b0a0d0;
+  --accent:  #c0a8f0;
+  --font:    'DotGothic16','Yu Gothic','Microsoft JhengHei','微軟正黑體',monospace;
+  --fs-xs:  15px; --fs-sm: 17px; --fs-md: 19px;
+  --fs-lg:  21px; --fs-xl: 24px; --fs-2xl: 28px;
+}
+
+body { background:var(--bg); font-family:var(--font); color:var(--text); font-size:var(--fs-sm); overflow:hidden; width:100vw; height:100vh; }
+
+#stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.page  { position:fixed; inset:0; z-index:1; }
+
+/* ── P1 ── */
+#page-home { overflow:hidden; }
+
+#filters {
+  position:fixed; top:14px; right:14px;
+  display:flex; gap:6px; z-index:30; flex-wrap:wrap; justify-content:flex-end;
+}
+.filter-btn {
+  background:#2a1f50; border:2px solid #5a4280; border-radius:6px;
+  padding:6px 13px; cursor:pointer; color:var(--text);
+  font-family:var(--font); font-size:var(--fs-sm);
+  transition:background .2s,border-color .2s;
+  display:flex; align-items:center; gap:5px; justify-content:center; white-space:nowrap;
+}
+.filter-btn img { height:26px; object-fit:contain; }
+.filter-btn:hover  { background:#3e2f70; }
+.filter-btn.active { background:#4a3888; border-color:#9070d0; }
+
+#home-scroll { width:100%; height:100%; overflow:auto; cursor:grab; scrollbar-width:none; -ms-overflow-style:none; }
+#home-scroll:active { cursor:grabbing; }
+#home-scroll::-webkit-scrollbar { display:none; }
+
+#arena { position:relative; width:3000px; height:2000px; }
+
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-11px)} }
+
+.team-ball {
+  position:absolute; border-radius:50%; background:var(--ball); border:3px solid var(--ball-bd);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; user-select:none;
+  transition:box-shadow .25s,border-color .25s;
+  animation:float 4s ease-in-out infinite; z-index:5;
+}
+.team-ball:hover { animation-play-state:paused; transform:scale(1.08); box-shadow:0 0 22px rgba(180,150,255,.45); }
+.team-ball.active { border-color:#c0a0ff; box-shadow:0 0 30px rgba(190,160,255,.6); }
+.team-ball img { width:72%; height:72%; object-fit:contain; }
+.team-ball .ball-id { font-size:var(--fs-sm); font-weight:bold; text-align:center; color:var(--text); line-height:1.3; }
+.team-ball.ball-other { background:#5e5878; border-color:#807898; }
+.team-ball.ball-other .ball-id { font-size:var(--fs-xs); color:var(--dim); }
+
+.quote-bubble {
+  position:absolute; background:#1e1540; border:2px solid #7060b0; border-radius:10px;
+  padding:8px 13px; font-size:var(--fs-sm); color:var(--text);
+  max-width:240px; z-index:20; opacity:0; transform:scale(.85);
+  transition:opacity .28s,transform .28s; pointer-events:none; white-space:normal; line-height:1.5;
+}
+.quote-bubble.show { opacity:1; transform:scale(1); }
+.quote-bubble::after { content:''; position:absolute; width:0; height:0; border:9px solid transparent; left:20px; }
+.quote-bubble:not(.arrow-up)::after { bottom:-9px; border-top-color:#7060b0; border-bottom-width:0; }
+.quote-bubble.arrow-up::after       { top:-9px;    border-bottom-color:#7060b0; border-top-width:0; }
+
+.member-circle {
+  position:absolute; display:flex; flex-direction:column; align-items:center; gap:5px;
+  z-index:6; opacity:0; transform:scale(.4); transition:opacity .3s,transform .3s; cursor:default;
+}
+.member-circle.show { opacity:1; transform:scale(1); }
+.member-circle.link { cursor:pointer; }
+.member-circle.link:hover .mc-avatar { border-color:#d0b8ff; }
+
+.mc-avatar {
+  width:120px; height:120px; border-radius:50%;
+  background:var(--ball); border:3px solid var(--ball-bd);
+  overflow:hidden; display:flex; align-items:center; justify-content:center;
+  transition:box-shadow .2s;
+}
+.mc-avatar img { width:100%; height:100%; object-fit:cover; }
+.mc-avatar .mc-initial { font-size:38px; font-weight:bold; color:var(--dim); }
+.mc-label { display:flex; align-items:center; gap:5px; font-size:var(--fs-md); color:var(--text); text-shadow:0 1px 4px rgba(0,0,0,.6); white-space:nowrap; }
+.mc-label img { width:20px; height:20px; object-fit:contain; }
+
+.member-pill {
+  position:absolute; display:flex; align-items:center; gap:10px;
+  background:var(--pill); border:2px solid #5a4880; border-radius:12px;
+  padding:14px 28px; font-size:var(--fs-xl); z-index:6;
+  opacity:0; transform:scale(.4); transition:opacity .3s,transform .3s;
+  white-space:nowrap; cursor:default;
+}
+.member-pill.show { opacity:1; transform:scale(1); }
+.member-pill.link { cursor:pointer; }
+.member-pill.link:hover { background:#7a6aaa; border-color:#c0a0ff; }
+.member-pill img { width:34px; height:34px; object-fit:contain; opacity:.8; }
+
+/* Zoom control */
+#zoom-ctrl {
+  position:fixed; bottom:18px; right:18px; z-index:30;
+  display:flex; align-items:center; gap:6px;
+  background:rgba(26,18,58,.88); border:2px solid #5a4280; border-radius:10px;
+  padding:7px 12px; backdrop-filter:blur(6px);
+  font-family:var(--font); font-size:var(--fs-sm); color:var(--dim); user-select:none;
+}
+#zoom-ctrl button { background:none; border:none; color:var(--text); cursor:pointer; font-size:20px; line-height:1; padding:0 3px; font-family:monospace; }
+#zoom-ctrl button:hover { color:var(--accent); }
+#zoom-slider { width:90px; accent-color:#9070d0; cursor:pointer; }
+#zoom-label  { width:38px; text-align:center; font-size:var(--fs-xs); }
+
+@media(max-width:600px){
+  #zoom-ctrl{bottom:10px;right:10px;padding:6px 10px;gap:5px}
+  #zoom-slider{width:65px}
+  #filters{top:8px;right:8px;gap:4px}
+  .filter-btn{padding:5px 9px;font-size:var(--fs-xs)}
+  .filter-btn img{height:20px}
+}
+
+/* ── P2 ── */
+#page-player { overflow-y:auto; padding:20px 20px 40px; background:var(--bg); display:none; }
+
+.back-btn { background:#2a1f50; border:2px solid #5a4280; border-radius:8px; padding:9px 18px; color:var(--text); font-family:var(--font); font-size:var(--fs-md); cursor:pointer; margin-bottom:18px; transition:background .2s; }
+.back-btn:hover { background:#3e2f70; }
+
+.player-card { max-width:520px; margin:0 auto; background:#4a3888; border-radius:16px; padding:24px 24px 28px; }
+
+.p2-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+.p2-left { flex:1; margin-right:16px; }
+.p2-player-id { font-size:var(--fs-2xl); font-weight:bold; color:#fff; margin-bottom:14px; }
+.p2-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; min-width:100px; }
+.p2-icon-badges { display:flex; align-items:center; gap:6px; justify-content:flex-end; }
+.p2-badge-logo { height:22px; object-fit:contain; }
+.p2-player-icon { width:100px; height:100px; border-radius:50%; background:var(--ball); border:3px solid var(--ball-bd); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.p2-player-icon img { width:100%; height:100%; object-fit:cover; }
+.p2-initial { font-size:34px; font-weight:bold; color:var(--dim); }
+
+.speech-bubble { display:inline-block; background:#1e1540; border:2px solid #7060b0; border-radius:10px; padding:9px 14px; font-size:var(--fs-md); line-height:1.5; position:relative; max-width:250px; margin-bottom:12px; }
+.speech-bubble::after { content:''; position:absolute; right:-10px; top:13px; width:0; height:0; border:9px solid transparent; border-left-color:#7060b0; border-right:none; }
+
+.tags { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:20px; }
+.tag { background:#2a1f50; border:1px solid #7060b0; border-radius:999px; padding:4px 13px; font-size:var(--fs-sm); color:#d0c0f0; }
+
+.section-row { display:flex; align-items:stretch; gap:8px; margin-bottom:20px; }
+.side-label { writing-mode:vertical-rl; font-size:var(--fs-xs); color:#a090c0; letter-spacing:3px; padding:4px 0; display:flex; align-items:center; justify-content:center; min-width:20px; }
+
+.info-box { flex:1; border:2px solid #7060b0; border-radius:8px; padding:13px 14px; font-size:var(--fs-sm); line-height:2.1; }
+.push-badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:var(--fs-xs); font-weight:bold; color:#1a1030; }
+.stars-text { font-size:var(--fs-xl); letter-spacing:2px; }
+.star-on   { color:#ffcc00; }
+.star-half { color:#ffcc00; opacity:.45; }
+.star-off  { color:#5a4880; }
+.notes-list { margin-top:2px; list-style:none; }
+.notes-list li { font-size:var(--fs-xs); color:#c0b0e0; line-height:1.7; padding-left:15px; position:relative; }
+.notes-list li::before { content:'・'; position:absolute; left:0; }
+
+.img-section-wrap { flex:1; }
+.img-group { margin-bottom:12px; }
+.img-group-label { font-size:var(--fs-xs); color:var(--accent); margin-bottom:7px; border-left:3px solid var(--accent); padding-left:7px; }
+.img-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.img-cell { height:180px; background:#2a1f50; border-radius:6px; overflow:hidden; border:1px solid #5a4280; cursor:pointer; }
+.img-cell:hover { border-color:#9070d0; }
+.img-cell img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .2s; }
+.img-cell:hover img { opacity:.85; }
+
+.cp-section { margin-top:4px; }
+.cp-title { font-size:var(--fs-lg); color:var(--text); margin-bottom:12px; }
+.cp-list  { display:flex; gap:18px; flex-wrap:wrap; }
+.cp-ball  { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:default; }
+.cp-ball.link { cursor:pointer; }
+.cp-ball.link:hover .cp-avatar { border-color:#d0b8ff; }
+.cp-avatar { width:68px; height:68px; border-radius:50%; background:var(--ball); border:2px solid var(--ball-bd); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.cp-avatar img { width:100%; height:100%; object-fit:cover; }
+.cp-avatar .cp-initial { font-size:var(--fs-sm); color:var(--dim); text-align:center; padding:4px; }
+.cp-name { display:flex; align-items:center; gap:3px; font-size:var(--fs-xs); color:var(--text); }
+.cp-name img { width:15px; height:15px; object-fit:contain; }
+
+.wip-banner { background:#2a1f50; border:2px dashed #5a4280; border-radius:10px; padding:20px; text-align:center; font-size:var(--fs-md); color:var(--dim); margin-top:10px; }
+
+/* Lightbox */
+#lightbox { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:200; display:none; align-items:center; justify-content:center; }
+#lightbox.open { display:flex; }
+#lightbox-img { max-width:90vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 0 40px rgba(0,0,0,.6); }
+#lightbox-close { position:absolute; top:16px; right:20px; background:none; border:none; color:#fff; font-size:32px; cursor:pointer; line-height:1; opacity:.8; }
+#lightbox-close:hover { opacity:1; }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div id="page-home" class="page">
+  <div id="filters">
+    <button class="filter-btn" data-filter="all">全部</button>
+    <button class="filter-btn active" data-filter="main">主隊</button>
+    <button class="filter-btn" data-filter="important">重要</button>
+    <button class="filter-btn" data-filter="LCK"><img src="Logo/LCK.png" alt="LCK"></button>
+    <button class="filter-btn" data-filter="LPL"><img src="Logo/LPL.png" alt="LPL"></button>
+  </div>
+  <div id="home-scroll"><div id="arena"></div></div>
+  <div id="zoom-ctrl">
+    <button id="zoom-out">−</button>
+    <input type="range" id="zoom-slider" min="0.2" max="1.2" step="0.05" value="0.65">
+    <button id="zoom-in">＋</button>
+    <span id="zoom-label">65%</span>
+  </div>
+</div>
+
+<div id="page-player" class="page">
+  <button class="back-btn" id="back-btn">◀ 返回</button>
+  <div id="player-content"></div>
+</div>
+
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  CONSTANTS
+// ════════════════════════════════════════════
+const ARENA_W = 3000, ARENA_H = 2000;
+
+const ROLES = {
+  Top:'Logo/Role=Top.png', Jungle:'Logo/Role=Jungle.png',
+  Mid:'Logo/Role=Mid.png', Bot:'Logo/Role=Bot.png', Support:'Logo/Role=Support.png',
+};
+const PUSH_COLORS = {
+  '心肝':'#FF7A7D','準心肝':'#FF7A7D','會花錢':'#FFF27A',
+  '樂子人':'#7AE9FF','一般關注':'#8AFF7A',
+};
+const LEAGUE_LOGOS = { LCK:'Logo/LCK.png', LPL:'Logo/LPL.png' };
+
+// Ball diameter by importance tier
+const BALL_SIZE = { 1:155, 2:185, 3:220 };
+
+// ════════════════════════════════════════════
+//  TEAM DATA  (importance: 1–3)
+// ════════════════════════════════════════════
+const TEAMS = [
+  // ── LCK ──
+  { id:'GEN', name:'Gen.G', league:'LCK', importance:3, logo:'Logo/GEN.png',
+    quote:'這是我主隊，GEN > other',
+    members:[
+      {id:'Kiin',   name:'Kiin',   role:'Top',    hasPage:true, icon:'photo/Kiin/Kiin-icon.png'},
+      {id:'Canyon', name:'Canyon', role:'Jungle', hasPage:true, icon:'photo/Canyon/Canyon-icon.png'},
+      {id:'Chovy',  name:'Chovy',  role:'Mid',    hasPage:true, icon:'photo/Chovy/Chovy.png'},
+      {id:'Ruler',  name:'Ruler',  role:'Bot',    hasPage:true, icon:'photo/Ruler/Ruler.png'},
+      {id:'Duro',   name:'Duro',   role:'Support',hasPage:true, icon:'photo/Duro/Duro.png'},
+    ]},
+  { id:'DK', name:'Dplus KIA', league:'LCK', importance:3, logo:'Logo/DK.png',
+    quote:'這是我抱有期待的小朋友隊伍',
+    members:[
+      {id:'Siwoo',    name:'Siwoo',    role:'Top',    hasPage:true, icon:'photo/Siwoo/Siwoo-icon.png'},
+      {id:'Lucid',    name:'Lucid',    role:'Jungle', hasPage:true, icon:'photo/Lucid/Lucid.png'},
+      {id:'ShowMaker',name:'ShowMaker',role:'Mid',    hasPage:true, icon:'photo/ShowMaker/DK_ShowMaker_2026_Split_1.png'},
+      {id:'Smash',    name:'Smash',    role:'Bot',    hasPage:true, icon:'photo/Smash/Smash.png'},
+      {id:'Career',   name:'Career',   role:'Support',hasPage:true, icon:'photo/Career/Career.png'},
+    ]},
+  { id:'HLE', name:'Hanwha Life', league:'LCK', importance:2, logo:'Logo/HLE.png',
+    quote:'我靠五隻豬（我在這裡只關注 Kanavi）',
+    members:[
+      {id:'Zeus_HLE', name:'Zeus',     role:'Top',    hasPage:false,icon:null},
+      {id:'Kanavi',   name:'Kanavi',   role:'Jungle', hasPage:true, icon:'photo/Kanavi/HLE_Kanavi_2026_Split_1.png'},
+      {id:'Zeka',     name:'Zeka',     role:'Mid',    hasPage:false,icon:null},
+      {id:'Gumayusi', name:'Gumayusi', role:'Bot',    hasPage:false,icon:null},
+      {id:'Delight',  name:'Delight',  role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'NS', name:'NS Redforce', league:'LCK', importance:2, logo:'Logo/NS_RedForce.png',
+    quote:'是 Lehends 的最後一年了，所以想守候他的最後一舞',
+    members:[
+      {id:'Kingen', name:'Kingen', role:'Top',    hasPage:false,icon:null},
+      {id:'Sponge', name:'Sponge', role:'Jungle', hasPage:false,icon:null},
+      {id:'Scout',  name:'Scout',  role:'Mid',    hasPage:false,icon:null},
+      {id:'Diable', name:'Diable', role:'Bot',    hasPage:false,icon:null},
+      {id:'Lehends',name:'Lehends',role:'Support',hasPage:true, icon:'photo/Lehends/Lehends.png'},
+    ]},
+  { id:'T1', name:'T1', league:'LCK', importance:1, logo:'Logo/T1.png',
+    quote:'加油啊 T1，我永遠會站在你的對面的（討厭此隊粉絲）',
+    members:[
+      {id:'Doran',name:'Doran',role:'Top',    hasPage:false,icon:null},
+      {id:'Oner', name:'Oner', role:'Jungle', hasPage:false,icon:null},
+      {id:'Faker',name:'Faker',role:'Mid',    hasPage:false,icon:null},
+      {id:'Peyz', name:'Peyz', role:'Bot',    hasPage:false,icon:null},
+      {id:'Keria',name:'Keria',role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'KT', name:'KT Rolster', league:'LCK', importance:1, logo:'Logo/KT.png',
+    quote:'期許成為黑馬的隊伍',
+    members:[
+      {id:'PerfecT',name:'PerfecT',role:'Top',    hasPage:false,icon:null},
+      {id:'Cuzz',   name:'Cuzz',   role:'Jungle', hasPage:false,icon:null},
+      {id:'Bdd',    name:'Bdd',    role:'Mid',    hasPage:false,icon:null},
+      {id:'Aiming', name:'Aiming', role:'Bot',    hasPage:false,icon:null},
+      {id:'Effort', name:'Effort', role:'Support',hasPage:false,icon:null},
+      {id:'Ghost',  name:'Ghost',  role:'Bot',    hasPage:false,icon:null},
+      {id:'Pollu',  name:'Pollu',  role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'KRX', name:'Kiwoon DRX', league:'LCK', importance:1, logo:'Logo/KRX.png',
+    quote:'Willer 很帥，Ucal 會跳舞',
+    members:[
+      {id:'Rich',    name:'Rich',    role:'Top',    hasPage:false,icon:null},
+      {id:'Vincenzo',name:'Vincenzo',role:'Jungle', hasPage:false,icon:null},
+      {id:'Willer',  name:'Willer',  role:'Jungle', hasPage:false,icon:null},
+      {id:'Ucal',    name:'Ucal',    role:'Mid',    hasPage:false,icon:null},
+      {id:'Jiwoo',   name:'Jiwoo',   role:'Bot',    hasPage:false,icon:null},
+      {id:'Lazyfeel',name:'Lazyfeel',role:'Bot',    hasPage:false,icon:null},
+      {id:'Andil',   name:'Andil',   role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'BFX', name:'BNK FEARX', league:'LCK', importance:1, logo:'Logo/BFX.png',
+    quote:'我以前跑跑卡丁車追這隊，是管理層和教練都很好的隊伍',
+    members:[
+      {id:'Clear',  name:'Clear',  role:'Top',    hasPage:false,icon:null},
+      {id:'Raptor', name:'Raptor', role:'Jungle', hasPage:false,icon:null},
+      {id:'VicLa',  name:'VicLa', role:'Mid',    hasPage:false,icon:null},
+      {id:'Daystar',name:'Daystar',role:'Mid',    hasPage:false,icon:null},
+      {id:'Taeyoon',name:'Taeyoon',role:'Bot',   hasPage:false,icon:null},
+      {id:'Kellin', name:'Kellin', role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'DNS', name:'DN SOOPers', league:'LCK', importance:1, logo:'Logo/DNS.png',
+    quote:'明明 ID 都不錯，排起來為什麼墊底',
+    members:[
+      {id:'DuDu',   name:'DuDu',   role:'Top',    hasPage:false,icon:null},
+      {id:'Pyosik', name:'Pyosik', role:'Jungle', hasPage:false,icon:null},
+      {id:'Clozer', name:'Clozer', role:'Mid',    hasPage:false,icon:null},
+      {id:'daokdam',name:'daokdam',role:'Bot',    hasPage:false,icon:null},
+      {id:'Life',   name:'Life',   role:'Support',hasPage:false,icon:null},
+      {id:'Peter',  name:'Peter',  role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'BRO', name:'HANJIN Brion', league:'LCK', importance:1, logo:'Logo/BRO.png',
+    quote:'以前有很甜的 CP 在這隊',
+    members:[
+      {id:'Casting',name:'Casting',role:'Top',    hasPage:false,icon:null},
+      {id:'GIDEON', name:'GIDEON', role:'Jungle', hasPage:false,icon:null},
+      {id:'Loki',   name:'Loki',   role:'Mid',    hasPage:false,icon:null},
+      {id:'Roamer', name:'Roamer', role:'Mid',    hasPage:false,icon:null},
+      {id:'Teddy',  name:'Teddy',  role:'Bot',    hasPage:false,icon:null},
+      {id:'Namgung',name:'Namgung',role:'Support',hasPage:false,icon:null},
+    ]},
+  // ── LPL ──
+  { id:'TES', name:'TOP ESPORTS', league:'LPL', importance:3, logo:'Logo/TES.png',
+    quote:'無論你們是不是正確的人，我永遠站在天神這裡',
+    members:[
+      {id:'369',       name:'369',       role:'Top',    hasPage:false,icon:null},
+      {id:'Zuian',     name:'Zuian',     role:'Top',    hasPage:false,icon:null},
+      {id:'Tian',      name:'Tian',      role:'Jungle', hasPage:true, icon:'photo/Tian/Tian.png'},
+      {id:'Creme',     name:'Creme',     role:'Mid',    hasPage:true, icon:'photo/Creme/Creme.png'},
+      {id:'Jackeylove',name:'Jackeylove',role:'Bot',    hasPage:true, icon:'photo/Jackeylove/JackeyLove.png'},
+      {id:'Fengyue',   name:'Fengyue',   role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'LNG', name:'LNG Esports', league:'LPL', importance:2, logo:'Logo/LNG.png',
+    quote:'因為情誼所以留在這裡看 MISSING',
+    members:[
+      {id:'Sheer',  name:'Sheer',  role:'Top',    hasPage:false,icon:null},
+      {id:'Croco',  name:'Croco',  role:'Jungle', hasPage:false,icon:null},
+      {id:'BullDog',name:'BullDog',role:'Mid',    hasPage:false,icon:null},
+      {id:'1xn',    name:'1xn',    role:'Bot',    hasPage:false,icon:null},
+      {id:'MISSING',name:'MISSING',role:'Support',hasPage:true, icon:'photo/MISSING/MISSING.png'},
+    ]},
+  { id:'BLG', name:'Bilibili Gaming', league:'LPL', importance:2, logo:'Logo/BLG.png',
+    quote:'基本上討厭此隊，都不是什麼好男人',
+    members:[
+      {id:'Bin',   name:'Bin',   role:'Top',    hasPage:false,icon:null},
+      {id:'Xun',   name:'Xun',   role:'Jungle', hasPage:false,icon:null},
+      {id:'Knight',name:'Knight',role:'Mid',    hasPage:true, icon:'photo/Knight/Knight.png'},
+      {id:'Viper', name:'Viper', role:'Bot',    hasPage:false,icon:null},
+      {id:'ON',    name:'ON',    role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'AL', name:"Anyone's Legend", league:'LPL', importance:1, logo:'Logo/AL.png',
+    quote:'上野是不錯的人，可關注',
+    members:[
+      {id:'Flandre',name:'Flandre',role:'Top',    hasPage:false,icon:null},
+      {id:'Tarzan', name:'Tarzan', role:'Jungle', hasPage:false,icon:null},
+      {id:'Shanks', name:'Shanks', role:'Mid',    hasPage:false,icon:null},
+      {id:'Hope',   name:'Hope',   role:'Bot',    hasPage:false,icon:null},
+      {id:'Kael',   name:'Kael',   role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'WBG', name:'Weibo Gaming', league:'LPL', importance:1, logo:'Logo/WBG.png',
+    quote:'小虎手勢舞（只記得這個，但天神去年在這隊）',
+    members:[
+      {id:'Zika',  name:'Zika',  role:'Top',    hasPage:false,icon:null},
+      {id:'JieJie',name:'JieJie',role:'Jungle', hasPage:false,icon:null},
+      {id:'Xiaohu',name:'Xiaohu',role:'Mid',    hasPage:false,icon:null},
+      {id:'Elk',   name:'Elk',   role:'Bot',    hasPage:false,icon:null},
+      {id:'Hang',  name:'Hang',  role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'JDG', name:'JD Gaming', league:'LPL', importance:1, logo:'Logo/JDG.png',
+    quote:'有兩位寶島男兒，可以支持一下',
+    members:[
+      {id:'Xiaoxu', name:'Xiaoxu', role:'Top',    hasPage:false,icon:null},
+      {id:'JunJia', name:'JunJia', role:'Jungle', hasPage:false,icon:null},
+      {id:'HongQ',  name:'HongQ',  role:'Mid',    hasPage:false,icon:null},
+      {id:'GALA',   name:'GALA',   role:'Bot',    hasPage:false,icon:null},
+      {id:'Vampire',name:'Vampire',role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'IG', name:'Invictus Gaming', league:'LPL', importance:1, logo:'Logo/iG.png',
+    quote:'只在乎一下 Meiko',
+    members:[
+      {id:'Breath', name:'Breath', role:'Top',    hasPage:false,icon:null},
+      {id:'Soboro', name:'Soboro', role:'Jungle', hasPage:false,icon:null},
+      {id:'Wei',    name:'Wei',    role:'Jungle', hasPage:false,icon:null},
+      {id:'Renard', name:'Renard', role:'Mid',    hasPage:false,icon:null},
+      {id:'Rookie', name:'Rookie', role:'Mid',    hasPage:false,icon:null},
+      {id:'JiaQi',  name:'JiaQi', role:'Bot',    hasPage:false,icon:null},
+      {id:'Meiko',  name:'Meiko', role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'EDG', name:'EDward Gaming', league:'LPL', importance:1, logo:'Logo/EDG.png', quote:'',
+    members:[
+      {id:'Zdz',    name:'Zdz',    role:'Top',    hasPage:false,icon:null},
+      {id:'Hiaohao',name:'Hiaohao',role:'Jungle', hasPage:false,icon:null},
+      {id:'Angel',  name:'Angel',  role:'Mid',    hasPage:false,icon:null},
+      {id:'Leave',  name:'Leave',  role:'Bot',    hasPage:false,icon:null},
+      {id:'Parukia',name:'Parukia',role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'LGD', name:'LGD Gaming', league:'LPL', importance:1, logo:'Logo/LGD.png', quote:'',
+    members:[
+      {id:'Burdol',  name:'Burdol',  role:'Top',    hasPage:false,icon:null},
+      {id:'Heng',    name:'Heng',    role:'Jungle', hasPage:false,icon:null},
+      {id:'Tangyuan',name:'Tangyuan',role:'Mid',    hasPage:false,icon:null},
+      {id:'Shaoye',  name:'Shaoye',  role:'Bot',    hasPage:false,icon:null},
+      {id:'Ycx',     name:'Ycx',     role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'NIP', name:'Ninjas in Pyjamas', league:'LPL', importance:1, logo:'Logo/NIP.png',
+    quote:'一定要看卓哥',
+    members:[
+      {id:'HOYA', name:'HOYA', role:'Top',    hasPage:false,icon:null},
+      {id:'Guwon',name:'Guwon',role:'Jungle', hasPage:false,icon:null},
+      {id:'Care', name:'Care', role:'Mid',    hasPage:false,icon:null},
+      {id:'Assum',name:'Assum',role:'Bot',    hasPage:false,icon:null},
+      {id:'Zhuo', name:'Zhuo', role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'WE', name:'Team WE', league:'LPL', importance:1, logo:'Logo/WE.png',
+    quote:'這隊是 MISSING 的老家',
+    members:[
+      {id:'Cube', name:'Cube', role:'Top',    hasPage:false,icon:null},
+      {id:'Monki',name:'Monki',role:'Jungle', hasPage:false,icon:null},
+      {id:'Karis',name:'Karis',role:'Mid',    hasPage:false,icon:null},
+      {id:'About',name:'About',role:'Bot',    hasPage:false,icon:null},
+      {id:'Erha', name:'Erha', role:'Support',hasPage:false,icon:null},
+    ]},
+  { id:'TT', name:'TT Gaming', league:'LPL', importance:1, logo:'Logo/TT.png', quote:'',
+    members:[
+      {id:'Sasi',   name:'Sasi',   role:'Top',    hasPage:false,icon:null},
+      {id:'Climber',name:'Climber',role:'Jungle', hasPage:false,icon:null},
+      {id:'Saber',  name:'Saber',  role:'Mid',    hasPage:false,icon:null},
+      {id:'Hena',   name:'Hena',   role:'Bot',    hasPage:false,icon:null},
+      {id:'Xiaoxia',name:'Xiaoxia',role:'Support',hasPage:false,icon:null},
+    ]},
+  // ── other ──
+  { id:'other', name:'other', league:'other', importance:3, logo:null,
+    quote:'已退役或暫時休息的選手', isSpecial:true,
+    members:[
+      {id:'BeryL',name:'BeryL',role:'Support',hasPage:true,icon:'photo/BeryL/BeryL.png'},
+      {id:'Doinb',name:'Doinb',role:'Mid',    hasPage:true,icon:'photo/Doinb/Doinb.png'},
+      {id:'Yagao',name:'Yagao',role:'Mid',    hasPage:true,icon:'photo/Yagao/Yagao.png'},
+    ]},
+];
+
+// ════════════════════════════════════════════
+//  PLAYER PAGES
+// ════════════════════════════════════════════
+const PLAYERS = {
+  // ── Gen.G ──
+  Kiin:{
+    id:'Kiin',fullName:'金基仁',team:'GEN',league:'LCK',role:'Top',
+    icon:'photo/Kiin/Kiin-icon.png',
+    quote:'都是 business 關係',tags:['傭兵','理性人','青蛙'],
+    nickname:'蛙醬、緊急人',birthday:'1999/05/28',
+    pushCategory:'會花錢',stars:4,maxStars:5,
+    notes:[
+      '我的世一上（世界第一上路），要去哪裡找到又冷靜又穩又有高技術的上路啊。如此穩定又如此強大，所以我也認為他需要一座世界冠軍',
+      '1999 年的哥在這個圈子內已經不算年輕了，由於早期在下游隊伍努力當院長（一人帶飛全隊）是直到 2024 年才有了第一座 LCK 聯賽冠軍，哭的樣子真的很像天使下凡，希望今年也能看到他拿到世界冠軍而落淚',
+      '小青蛙，就是整個人圓滾滾的很像小青蛙，具體請參考三麗鷗的大眼蛙',
+      '雖然說和誰都是 business 關係，但能感受到他的偏愛，嘴上說施尤哥（Lehends）很吵很煩，實際上其實最喜歡他施尤哥了',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Kiin/Kiin-1.jpg','photo/Kiin/Kiin-2.jpg','photo/Kiin/Kiin-3.jpg']},
+      {label:'周邊',files:['photo/Kiin/Kiin-goods.jpg']},
+      {label:'創作紀錄',files:['photo/Kiin/Kiin-draw-1.png','photo/Kiin/Kiin-draw-2.png']},
+    ],
+    cp:['Chovy','Lehends'],
+  },
+  Canyon:{
+    id:'Canyon',fullName:'金建敷',team:'GEN',league:'LCK',role:'Jungle',
+    icon:'photo/Canyon/Canyon-icon.png',
+    quote:'希望你可以一直打下去（對 ShowMaker 說的）',tags:['北極熊','外冷內熱'],
+    nickname:'北極熊、敷',birthday:'2001/06/18',
+    pushCategory:'一般關注',stars:3,maxStars:5,
+    notes:[
+      '北極熊真的要打亞運了欸（2026）',
+      '憨厚的冷面笑匠，我所見過最放得開的他是還在 DWG（現在的 DK）的時候',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Canyon/Canyon-1.jpg']},
+      {label:'周邊',files:null},{label:'創作紀錄',files:null},
+    ],
+    cp:['ShowMaker'],
+  },
+  Chovy:{
+    id:'Chovy',fullName:'鄭志勳',team:'GEN',league:'LCK',role:'Mid',
+    icon:'photo/Chovy/Chovy.png',
+    quote:'出軌的話就滾吧（對 Lehends 說的）',tags:['貓咪','年下氣質'],
+    nickname:'貓、貓咪、貓哥、超威',birthday:'2001/03/03',
+    pushCategory:'心肝',stars:5,maxStars:5,
+    notes:[
+      '我的世一中（世界第一中路）候選人之一，技術真的無可挑剔，但可惜的是還沒有一座世界冠軍',
+      '他像是班級段考總是前三名的優等生，但讓人疑惑的是，他卻總在升學大考時失利。而我在 2026 年的期許，就是看著他和 Ruler 手牽著手拿到屬於他的世界冠軍',
+      '說實話我對於這隻貓的性格掌握是難以用文字描述的，建議是直接看看他平常說話的方式，我只能說就是個有教養、時而毒舌但卻不冒犯人、擁有自己一套神奇思考邏輯的貓貓',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Chovy/Chovy-1.jpg','photo/Chovy/Chovy-2.jpg','photo/Chovy/Chovy-3.jpg']},
+      {label:'周邊',files:['photo/Chovy/Chovy-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Chovy/Chovy-draw-1.png','photo/Chovy/Chovy-draw-2.png']},
+    ],
+    cp:['Kiin','Lehends','ShowMaker'],
+  },
+  Ruler:{
+    id:'Ruler',fullName:'朴載赫',team:'GEN',league:'LCK',role:'Bot',
+    icon:'photo/Ruler/Ruler.png',
+    quote:'真可愛（用中文說的！？）',tags:['LPL傭兵','感性人','狗狗'],
+    nickname:'尺、尺哥、尺醬、阿尺、金毛',birthday:'1998/12/29',
+    pushCategory:'準心肝',stars:4.5,maxStars:5,
+    notes:[
+      'S7 世界冠軍 AD（SSG），在 S16 的現今還能在第一線叱吒風雲，作為老人真的是很了不起',
+      '但主要吸引我的是，他的真誠和溫和的性格。薪水前段班的競男爛人太多，他始終和 CoreJJ（曹容仁，當年和 Ruler 一起拿下世冠的哥哥）說的一樣，是個只知道 LOL 其他都不知道的傢伙',
+      '最讓我的流連忘返的是 22GEN 到現在的一切，尤其是 2023 年時像是被 Gen.G 放棄一樣被交易到 LPL（中國），即便如此還是堅持著他的職業道德努力下去，和 23JDG 拿下了那一年除了世界賽以外的大滿貫',
+      '我愛黃金獵犬大狗',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Ruler/Ruler-1.jpg','photo/Ruler/Ruler-2.jpg','photo/Ruler/Ruler-3.jpg']},
+      {label:'周邊',files:['photo/Ruler/Ruler-Goods.png']},
+      {label:'創作紀錄',files:['photo/Ruler/Ruler-draw-1.png','photo/Ruler/Ruler-draw-2.png']},
+    ],
+    cp:['Lehends','MISSING','Kanavi','Duro','Chovy'],
+  },
+  Duro:{
+    id:'Duro',fullName:'朱珉奎',team:'GEN',league:'LCK',role:'Support',
+    icon:'photo/Duro/Duro.png',
+    quote:'（來自忙內的側目）',tags:['忙內','馬臉'],
+    nickname:'嘟、嘟肉、忙內',birthday:'2002/02/04',
+    pushCategory:'一般關注',stars:3,maxStars:5,
+    notes:[
+      '由於是大學生休學來打電競的，所以初期的外號叫做大學生（但後面忘記接著休學了就被退學了，好笑的稱呼也包含退學生x）',
+      '不說話也是一款帥哥，但一講話就上演進擊的巨人（隊友認為），偶爾是兔子（自認為）偶爾也是馬（LCK 美工認為）',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Duro/Duro-1.jpg']},
+      {label:'周邊',files:null},{label:'創作紀錄',files:null},
+    ],
+    cp:['Ruler'],
+  },
+  // ── DK ──
+  Siwoo:{
+    id:'Siwoo',fullName:'田恃宇',team:'DK',league:'LCK',role:'Top',
+    icon:'photo/Siwoo/Siwoo-icon.png',
+    quote:'想和 Zeus 哥吃飯',tags:['內向','說話小聲','恐龍'],
+    nickname:'天使魚、西嗚',birthday:'2007/11/24',
+    pushCategory:'會花錢',stars:3.5,maxStars:5,
+    notes:[
+      '眾所皆知的宙斯（Zeus）迷弟，但我開始注意他的時候卻是因為站在許秀（ShowMaker）旁邊很可愛才看的',
+      '或許我覺得這世界應該只分成兩種人：不認識天使魚的人 & 西嗚姊姊',
+      '會說他可愛就是因為可愛內向又靦腆，相當之討喜',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Siwoo/Siwoo-1.png','photo/Siwoo/Siwoo-2.jpg']},
+      {label:'周邊',files:['photo/Siwoo/Siwoo-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Siwoo/Siwoo-draw-1.png','photo/Siwoo/Siwoo-draw-2.png']},
+    ],
+    cp:['Lucid','ShowMaker'],
+  },
+  Lucid:{
+    id:'Lucid',fullName:'崔容赫',team:'DK',league:'LCK',role:'Jungle',
+    icon:'photo/Lucid/Lucid.png',
+    quote:'從出生開始單推許秀',tags:['情感沉重','吉娃娃'],
+    nickname:'露西德、吉娃娃',birthday:'2005/01/28',
+    pushCategory:'會花錢',stars:3.5,maxStars:5,
+    notes:[
+      '著名的 ShowMaker 迷弟，追著他從青訓到出道，從抬頭仰望到並肩同行，想長長久久地和許秀哥一起走下去，可以說是電競圈內一則美麗童話',
+      '本人對他本來是辱追來著的（以一個侮辱式的追法，遇到什麼事情先貶低再說），主要是 2025 年底除了 DK 沒進世界賽，當時紀錄片還爆出了露西德對許秀（ShowMaker）有不尊重的言行，讓我只能對他先行保持距離',
+      '直至 2026 年兩個賽段快結束，這個 26DK 才讓我安心下來，我們家小朋友的氣氛就是好到不行，大家關係就是好得不得了',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Lucid/Lucid-1.jpg','photo/Lucid/Lucid-2.jpg','photo/Lucid/Lucid-3.jpg']},
+      {label:'周邊',files:['photo/Lucid/Lucid-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Lucid/Lucid-draw-1.png','photo/Lucid/Lucid-draw-2.png','photo/Lucid/Lucid-draw-3.png']},
+    ],
+    cp:['ShowMaker','Siwoo','Career'],
+  },
+  ShowMaker:{
+    id:'ShowMaker',fullName:'許秀',team:'DK',league:'LCK',role:'Mid',
+    icon:'photo/ShowMaker/DK_ShowMaker_2026_Split_1.png',
+    quote:'你說得對，但是這就是卡桑帝，🤔HP 4700，護甲 329，魔抗 201的英雄。有不可阻擋🤚，有護盾👌，還能過牆✌️。有控制🤙，甚至冷卻時間只有1秒✊，只要15點藍👍。轉換姿態時甚至可以刷新W的cd👈，還有✌️真實傷害。然後，護甲和魔抗提升後還能獲得技能加速👐，縮短Q的cd🙌，還縮短釋放時間😨，然後還有攻擊力😰。W就👊🏿😭👊🏿啊啊啊啊啊啊🖐️😭🤚',
+    tags:['少年感','直播天才'],
+    nickname:'小貓、許哥、秀妹',birthday:'2005/01/28',
+    pushCategory:'心肝',stars:5,maxStars:5,
+    notes:[
+      '最初的我：雖然大家很喜歡許哥但是我 get 不到',
+      '現在的我：年末/年初/年中沒有許秀怎麼活😭',
+      '公眾人物在被包裝的前提下仍露出醜惡面貌，便說明了他本性也不過如此。但許秀不一樣，肉眼可見的好教養，看得出家庭對他的品德影響甚大。以此為基礎，加上願意營業的性格，我總感覺他對於身邊的人是不間斷地在輸出，也要記得照顧好自己哇秀神',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/ShowMaker/ShowMaker-1.jpg','photo/ShowMaker/ShowMaker-2.jpg','photo/ShowMaker/ShowMaker-3.jpg']},
+      {label:'周邊',files:['photo/ShowMaker/ShowMaker-Goods1.jpg','photo/ShowMaker/ShowMaker-Goods2.jpg']},
+      {label:'創作紀錄',files:['photo/ShowMaker/ShowMaker-draw-1.png','photo/ShowMaker/ShowMaker-draw-2.png','photo/ShowMaker/ShowMaker-draw-3.png']},
+    ],
+    cp:['Lucid','Canyon','Chovy'],
+  },
+  Smash:{
+    id:'Smash',fullName:'申錦財',team:'DK',league:'LCK',role:'Bot',
+    icon:'photo/Smash/Smash.png',
+    quote:'就交給我吧。',tags:['早熟','心態好'],
+    nickname:'錦財、司馬許',birthday:'2006/07/20',
+    pushCategory:'會花錢',stars:3.5,maxStars:5,
+    notes:[
+      '26DK 對我來說意義太重大了，所以我進行一個箱推',
+      '從 T1 來到 DK，當年刻苦成長的年輕少年，來到了一個年上哥哥們都很照顧、年下弟弟也很可愛的環境，錦財的笑容多了起來',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Smash/Smash-1.jpg']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:['photo/Smash/Smash-draw-1.png']},
+    ],
+    cp:['Career'],
+  },
+  Career:{
+    id:'Career',fullName:'吳炯錫',team:'DK',league:'LCK',role:'Support',
+    icon:'photo/Career/Career.png',
+    quote:'我不會再退縮了。',tags:['努力家','忙內臉'],
+    nickname:'卡寶、凱瑞兒',birthday:'2004/08/29',
+    pushCategory:'會花錢',stars:3.5,maxStars:5,
+    notes:[
+      '26DK 對我來說意義太重大了，所以我進行一個箱推',
+      '今年才真正從 LCK CL（次級聯賽）上升到 LCK 出道的輔助孩子，一張忙內臉但實際上是隊內二哥',
+      '最精彩的部分一定是今年（2026）LCK CUP 對戰 T1 時的讓二追三，DK 在好不容易奪下一分時，Career 落淚後整個人燃起來，全部都像是少年漫畫一樣的安排，讓人不禁期待 26DK 可以有好的結局',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Career/Career-1.jpg','photo/Career/Career-2.jpg']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:['photo/Career/Career-draw-1.png','photo/Career/Career-draw-2.png']},
+    ],
+    cp:['Smash','Lucid','ShowMaker'],
+  },
+  // ── HLE ──
+  Kanavi:{
+    id:'Kanavi',fullName:'徐進赫',team:'HLE',league:'LCK',role:'Jungle',
+    icon:'photo/Kanavi/HLE_Kanavi_2026_Split_1.png',
+    quote:'牙膏好菜。',tags:['壞男人','豬豬','超雄'],
+    nickname:'進赫、看看、卡納比、卡納威、徐代表',birthday:'2000/11/02',
+    pushCategory:'會花錢',stars:4,maxStars:5,
+    notes:[
+      '傳說中和 Ruler 在 JDG 時期水火不容的那位打野，就是指 Kanavi 這傢伙，當他今年回來 LCK 時，大家總說「看看尺尺請和好」，大概就是因為好奇這倆到底是多不合才來關注他的吧',
+      '從外觀上來說，微微的下三白和恰到好處的五官配置是我的外貌取向（我是徐進赫顏飯）',
+      '從故事經歷來說，真的是很有故事性的一個人，一個反派角色的誕生或是就是這樣吧：做為二隊只能吃一隊選手用餐完後的飯食、被公司賣到了國外、被迫簽下奴隸條約，雖然最後有正義介入協調，同時也為了保障新生選手不再有相同的事情發生，以他為名建立了規定。但對於一個未成年的孩子來說，這不也是數個影響人格特質深遠的事件嗎？',
+      '我會永遠感謝在韓服排位上找到了徐進赫的曾奇（Yagao）',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Kanavi/Kanavi-1.jpg','photo/Kanavi/Kanavi-2.jpg','photo/Kanavi/Kanavi-3.jpg']},
+      {label:'周邊',files:['photo/Kanavi/Kanavi-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Kanavi/Kanavi-draw-1.png','photo/Kanavi/Kanavi-draw-2.png']},
+    ],
+    cp:['Yagao','Ruler','MISSING'],
+  },
+  // ── NS ──
+  Lehends:{
+    id:'Lehends',fullName:'孫施尤',team:'NS',league:'LCK',role:'Support',
+    icon:'photo/Lehends/Lehends.png',
+    quote:'你如果不相信自己的話就相信我吧，我會相信你的，你就相信我就好。',
+    tags:['猴子','媽媽屬性'],
+    nickname:'蓮子、蓮醬',birthday:'1998/12/24',
+    pushCategory:'會花錢',stars:4,maxStars:5,
+    notes:[
+      '這個世界只有喜歡 Lehends 的女人和不認識 Lehends 的女人（我的身邊統計學統計出來的）',
+      '性格很好又很幽默，就像你我日常生活會出現的鄰居大哥哥，有點沒用但在關鍵時候總會出手幫助',
+      '基本上就是帶孩子的印象，老牌輔助帶的不只 AD，連 Chovy 也有種他帶大的感覺（貓與貓照顧員的關係）',
+      '聲音很好聽的男人，推薦聆聽聲帶模仿或是日常直播語音（但麥克風常常炸麥請小心音量）',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Lehends/Lehends-1.jpg','photo/Lehends/Lehends-2.jpg','photo/Lehends/Lehends-3.jpg']},
+      {label:'周邊',files:['photo/Lehends/Lehends-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Lehends/Lehends-draw-1.jpg']},
+    ],
+    cp:['Kiin','Ruler','Chovy'],
+  },
+  // ── TES ──
+  Tian:{
+    id:'Tian',fullName:'高天亮',team:'TES',league:'LPL',role:'Jungle',
+    icon:'photo/Tian/Tian.png',
+    quote:'我就是我，我就是天。',tags:['狐狸','陰陽怪氣','神鬼二相性'],
+    nickname:'小天、天神（打得好時）、天除（打不好時）',birthday:'2000/07/24',
+    pushCategory:'心肝',stars:5,maxStars:5,
+    notes:[
+      '從出道開始總是次級的選擇，因為同鄉的 Knight 是個很優秀的中路，所以到了 Suning 也都是綑綁行銷而來的。但即使是這樣的高天亮，還是在 S9 的時候與 FPX 的隊友們淋金色的雨了，同時作為 FMVP 在舞台上說出了那句話──我就是我，我就是天',
+      '如果故事到了這裡就畫上了句點，我反而還不會喜歡上這個好幾次近乎碎掉的打野。沒人知道 S11 世界賽 FPX 在冰島發生了什麼事，外界無數揣測，只看見了那年因身心狀態不好而休息的 Tian，還有在 S11 結束後隨即回韓後退役的上路 Nuguri',
+      '#腹黑 #正太 #高智商 說不定是最貼切於他的三個標籤，只有腦袋夠好的人才能在短時間內想出那麼多陰陽怪氣他人的話語，我真的極致地喜歡他那張嘴，當然也很喜歡他意氣風發時，但同時也享受於觀察破碎的他',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Tian/Tian-1.jpg','photo/Tian/Tian-2.jpg','photo/Tian/Tian-3.jpg']},
+      {label:'周邊',files:['photo/Tian/Tian-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/Tian/Tian-draw-1.png']},
+    ],
+    cp:['Knight','Doinb','Jackeylove'],
+  },
+  Jackeylove:{
+    id:'Jackeylove',fullName:'喻文波',team:'TES',league:'LPL',role:'Bot',
+    icon:'photo/Jackeylove/JackeyLove.png',
+    quote:'如果說我是天選之人，我很開心，天和我都做了正確的選擇',
+    tags:['柴犬','哥哥','偉大無須多言'],
+    nickname:'哥哥、阿水哥哥、杰克愛',birthday:'2000/11/18',
+    pushCategory:'會花錢',stars:3,maxStars:5,
+    notes:[
+      'S8 世界冠軍 AD，同樣是出道即巔峰的男人',
+      '如果只是長著一張帥臉，我可能還未必會去注意他。雖說是因 2026 年養傷期間做的脫口秀而注意到這個人更深的地方，但更讓人目不轉睛的是他那偉大的性格',
+      '偉大是什麼？大概就是像他這樣待人溫和，生活乾淨自律，就算黑粉很多也總注意公共形象（雖然基本上都是粉絲在幫他吵架就是了），總之真的就是一句話：哥哥偉大無須多言',
+      '「以上由本台記者喻文播為您報導」',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Jackeylove/Jackeylove-1.jpg','photo/Jackeylove/Jackeylove-2.jpg','photo/Jackeylove/Jackeylove-3.jpg']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:['photo/Jackeylove/Jackeylove-draw-1.png']},
+    ],
+    cp:['Tian','Creme'],
+  },
+  // ── LNG ──
+  MISSING:{
+    id:'MISSING',fullName:'婁運峰',team:'LNG',league:'LPL',role:'Support',
+    icon:'photo/MISSING/MISSING.png',
+    quote:'你是最好的 AD。',tags:['貓咪','狗派','媽媽屬性'],
+    nickname:'咪醒、小咪、米神（打得好時）、米醋（打不好時）、中專男',birthday:'2001/05/26',
+    pushCategory:'準心肝',stars:4.5,maxStars:5,
+    notes:[
+      '2022 年的冬天，Ruler 從 Gen.G 轉會到 JDG 的時候，來到 JDG 宿舍第一個打招呼的就是自己的新搭檔 MISSING',
+      '那天是 Ruler 的生日，距離平安夜已經過了幾天，在中國有個習俗，就是在平安夜贈平安果（蘋果），MISSING 送了他一顆蘋果，這事讓 2023 年底的 Ruler 吐槽了：似乎熟了就不送了，好可惜',
+      '下路組是相互成就的，有人會說 Ruler 把 MISSING 帶到了不屬於他的高度，但也必須記得在異國他鄉時照顧了 Ruler 的，就是那個不惜帶著翻譯也要和 Ruler 拉近距離的 MISSING',
+      '和 MISSING 搭檔過的韓國人也不算少（Mystic、Peyz），他那溫柔且善良的性格可以說是天選的輔助選手吧',
+      '順帶一提，2022-2023 年內可以說是 LPL 和 LCK 平均公認的洛神（善於銳空/洛這個英雄）',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/MISSING/MISSING-1.jpg','photo/MISSING/MISSING-2.jpg','photo/MISSING/MISSING-3.jpg']},
+      {label:'周邊',files:['photo/MISSING/MISSING-Goods.jpg']},
+      {label:'創作紀錄',files:['photo/MISSING/MISSING-draw-1.png','photo/MISSING/MISSING-draw-2.png.png']},
+    ],
+    cp:['Ruler','Kanavi'],
+  },
+  // ── BLG ──
+  Knight:{
+    id:'Knight',fullName:'卓定',team:'BLG',league:'LPL',role:'Mid',
+    icon:'photo/Knight/Knight.png',
+    quote:'0.0',tags:['兔子','天然黑'],
+    nickname:'K 皇、K 奈、左手、手大哥、手阿姨',birthday:'2000/05/22',
+    pushCategory:'樂子人',stars:3,maxStars:5,
+    notes:[
+      '在我的道德範圍內他已經是徹底 out 了，但可惜的是高天亮實在太愛他了，儘管遭受背刺（卓定對著前女友說他壞話的部分）還是不離不棄──關於卓定的黑料，自己上網查比較快，總之我無法溺愛 BLG 這支商 K 戰隊',
+      '人設上也是屬於那種除了英雄聯盟什麼都不懂的單純少年，但說實話也都只是裝純罷了，請斟酌接觸',
+      '即便如此，他在中路的實力和表現卻是不可小覷的。23JDG 時，Ruler 也稱讚他的職業能力強，主動性強，會去 cover 整個團隊的走向',
+      '由於外號是黃金左手，與他相對的是我的心肝 Chovy，被稱其為右手。會提起此事其實也只是因為，現階段我心目中的世一中候選人兩位，卓定也有一份',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Knight/Knight-1.png','photo/Knight/Knight-Tian.gif']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:null},
+    ],
+    cp:['Tian','Jackeylove'],
+  },
+  // ── other ──
+  Doinb:{
+    id:'Doinb',fullName:'金泰相',team:'other',league:'LPL',role:'Mid',
+    icon:'photo/Doinb/Doinb.png',
+    quote:'我們是冠軍！',tags:['猴子','拜金','營業態度優'],
+    nickname:'硬幣哥',birthday:'1996/12/30',
+    pushCategory:'樂子人',stars:3,maxStars:5,
+    notes:[
+      '先說，我們主播只是沒隊伍要，不是退役啦！',
+      'S9 和高天亮手牽手一起拿世界冠軍的奇蹟中野組合，因冰島、頭盔事件等現已決裂，詳細依舊可以自己查網路，但沒有人知道中間究竟發生了什麼事，都是旁人揣測罷了',
+      '暫且不論人品好不好，他就只是個為了賺錢養家糊口什麼都能做的猴子，至少在粉絲營業這一塊他是非常敬業的（在賽後在賽場外撐著傘好幾個小時，只為了幫全部粉絲簽名的那種）',
+      '但也因為是靠直播這行吃飯的，所以嘴非常地碎，且動不動就帶人風向──和高天亮的中野關係決裂，原因也很有可能有他這張嘴的一份出力',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/Doinb/Doinb-1.jpg','photo/Doinb/Doinb-2.jpg']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:null},
+    ],
+    cp:['Tian'],
+  },
+  // ── other ──
+  BeryL:{
+    id:'BeryL',fullName:'趙乾熙',team:'other',league:'LCK',role:'Support',
+    icon:'photo/BeryL/BeryL.png',
+    quote:'許秀你做一個那個手勢（許秀：不要我做過了）這不一樣！',
+    tags:['軍師','頭腦派','原神哥'],
+    nickname:'老綠、歐巴、老綠歐巴',birthday:'1997/04/01',
+    pushCategory:'準心肝',stars:4.5,maxStars:5,
+    notes:[
+      '第一個非 T1 雙世界冠軍（甚至異隊，DWG、DRX 各拿了一個）的英雄聯盟選手',
+      '原神害人，米哈遊還我歐巴（開玩笑的，反正英雄聯盟是工作、其他遊戲才是生活！）',
+      '像開明的爸爸/哥哥系角色，推薦任何喜歡高智商男人的都來看老綠歐巴，雖然現已退役但在當兵前還有機會常在直播間看他玩遊戲。',
+      '我大概就是逆著主流在嗑許秀的 CP，主因是我感受到老綠真的好喜歡許秀，我真的不得不嗑啊（抱歉了敷秀）',
+    ],
+    imageGroups:[
+      {label:'一些好看圖',files:['photo/BeryL/BeryL-1.jpg','photo/BeryL/BeryL-2.jpg','photo/BeryL/BeryL-3.jpg']},
+      {label:'周邊',files:null},
+      {label:'創作紀錄',files:null},
+    ],
+    cp:['ShowMaker'],
+  },
+};
+
+// ════════════════════════════════════════════
+//  STARS (canvas)
+// ════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('stars'), ctx=c.getContext('2d'); let s=[];
+  function resize(){
+    c.width=innerWidth; c.height=innerHeight;
+    s=Array.from({length:150},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.4+.3,a:Math.random()*.45+.15,sp:Math.random()*.0008+.0003,ph:Math.random()*Math.PI*2}));
+  }
+  function draw(t){
+    ctx.clearRect(0,0,c.width,c.height);
+    s.forEach(s=>{const a=s.a+Math.sin(t*s.sp*1000+s.ph)*.12;ctx.beginPath();ctx.arc(s.x*c.width,s.y*c.height,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(210,195,255,${Math.max(.05,a)})`;ctx.fill()});
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize',resize); resize(); requestAnimationFrame(draw);
+})();
+
+// ════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════
+function getBallSize(team){ return BALL_SIZE[team.importance]||155; }
+
+function seededFloat(seed){ const x=Math.sin(seed*127.1+311.7)*43758.5453; return x-Math.floor(x); }
+
+function memberGlowStyle(pid){
+  const p=PLAYERS[pid]; if(!p||!p.stars) return '';
+  const r=p.stars/p.maxStars;
+  return `box-shadow:0 0 ${(4+r*12).toFixed(0)}px ${(r*5).toFixed(0)}px rgba(200,160,255,${(.1+r*.55).toFixed(2)})`;
+}
+
+function renderStars(stars,maxStars){
+  const f=Math.floor(stars), h=(stars-f)>=.5?1:0, e=maxStars-f-h;
+  return '<span class="star-on">★</span>'.repeat(f)+(h?'<span class="star-half">★</span>':'')+'<span class="star-off">☆</span>'.repeat(Math.max(0,e));
+}
+
+function findMember(id){ for(const t of TEAMS){const m=t.members.find(m=>m.id===id);if(m)return m;} return null; }
+
+// ════════════════════════════════════════════
+//  SCATTER POSITIONS
+// ════════════════════════════════════════════
+const posCache={};
+
+function getScatterPositions(key,teams){
+  if(posCache[key]) return posCache[key];
+  const pos=[], MIN=280, MX=160, MY=160;
+  const maxX=ARENA_W-MX-220, maxY=ARENA_H-MY-220;
+  teams.forEach((team,i)=>{
+    const sz=getBallSize(team), r=sz/2;
+    let placed=false;
+    for(let a=0;a<400&&!placed;a++){
+      const x=MX+seededFloat(i*997+a*31+3)*(maxX-MX);
+      const y=MY+seededFloat(i*1009+a*37+7)*(maxY-MY);
+      const cx=x+r, cy=y+r;
+      if(!pos.some(p=>Math.hypot(cx-p.cx,cy-p.cy)<MIN)){pos.push({x,y,cx,cy});placed=true;}
+    }
+    if(!placed) pos.push({x:MX+(i%4)*680,y:MY+Math.floor(i/4)*460,cx:MX+(i%4)*680+r,cy:MY+Math.floor(i/4)*460+r});
+  });
+  posCache[key]=pos; return pos;
+}
+
+// Fixed center positions for main view
+const MAIN_CX = { GEN:{cx:2060,cy:1350}, DK:{cx:1500,cy:680}, TES:{cx:930,cy:1350}, other:{cx:520,cy:720} };
+const MAIN_CENTER = {x:1300, y:1050};
+
+// ════════════════════════════════════════════
+//  P1 STATE
+// ════════════════════════════════════════════
+const arena=document.getElementById('arena'), homeScroll=document.getElementById('home-scroll');
+let currentFilter='main', activeTeamId=null, teamEls={}, currentZoom=.65;
+
+function calcInitZoom(){ return Math.max(.3,parseFloat(Math.min(innerWidth/1900,innerHeight/1300,1).toFixed(2))); }
+
+function scrollToCenter(ax,ay){
+  homeScroll.scrollLeft=ax*currentZoom-homeScroll.clientWidth/2;
+  homeScroll.scrollTop =ay*currentZoom-homeScroll.clientHeight/2;
+}
+
+function setZoom(z,px,py){
+  z=Math.min(1.2,Math.max(.2,z));
+  const old=currentZoom;
+  if(px===undefined){px=(homeScroll.scrollLeft+homeScroll.clientWidth/2)/old;py=(homeScroll.scrollTop+homeScroll.clientHeight/2)/old;}
+  currentZoom=z; arena.style.zoom=z;
+  homeScroll.scrollLeft=px*z-homeScroll.clientWidth/2;
+  homeScroll.scrollTop =py*z-homeScroll.clientHeight/2;
+  document.getElementById('zoom-slider').value=z;
+  document.getElementById('zoom-label').textContent=Math.round(z*100)+'%';
+}
+
+function getVisibleTeams(){
+  if(currentFilter==='main')   return ['GEN','DK','TES','other'].map(id=>TEAMS.find(t=>t.id===id));
+  if(currentFilter==='all')    return TEAMS.filter(t=>t.id!=='other');
+  if(currentFilter==='important') return TEAMS.filter(t=>t.importance>=2&&t.id!=='other');
+  return TEAMS.filter(t=>t.league===currentFilter);
+}
+
+// ════════════════════════════════════════════
+//  RENDER TEAMS
+// ════════════════════════════════════════════
+function renderTeams(){
+  arena.innerHTML=''; teamEls={}; activeTeamId=null;
+  const visible=getVisibleTeams(), isScatter=currentFilter!=='main';
+  const positions=isScatter?getScatterPositions(currentFilter,visible):null;
+
+  visible.forEach((team,i)=>{
+    const isOther=team.id==='other';
+    const sz=getBallSize(team), r=sz/2;
+    const {cx,cy}=isScatter?positions[i]:(MAIN_CX[team.id]||{cx:300+i*400,cy:600});
+    const x=cx-r, y=cy-r;
+    const delay=(i*.6).toFixed(2)+'s';
+
+    const ball=document.createElement('div');
+    ball.className='team-ball'+(isOther?' ball-other':'');
+    ball.style.cssText=`left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;animation-delay:${delay}`;
+    ball.dataset.cx=cx; ball.dataset.cy=cy;
+
+    if(team.logo){const img=document.createElement('img');img.src=team.logo;img.alt=team.name;ball.appendChild(img);}
+    else{const sp=document.createElement('span');sp.className='ball-id';sp.textContent=isOther?'other':team.id;ball.appendChild(sp);}
+    ball.addEventListener('click',()=>toggleTeam(team.id));
+    arena.appendChild(ball);
+
+    const aboveBall=cy>180;
+    const bubble=document.createElement('div');
+    bubble.className='quote-bubble'+(aboveBall?'':' arrow-up');
+    bubble.textContent=team.quote||team.name;
+    bubble.style.cssText=`left:${x}px;top:${aboveBall?y-95:y+sz+14}px`;
+    arena.appendChild(bubble);
+
+    teamEls[team.id]={ball,bubble,memberEls:[]};
+  });
+}
+
+function toggleTeam(id){
+  if(activeTeamId===id){collapseTeam(id);activeTeamId=null;}
+  else{if(activeTeamId)collapseTeam(activeTeamId);activeTeamId=id;expandTeam(id);}
+}
+
+function collapseTeam(id){
+  const el=teamEls[id];if(!el)return;
+  el.ball.classList.remove('active'); el.bubble.classList.remove('show');
+  el.memberEls.forEach(m=>{m.classList.remove('show');setTimeout(()=>m.remove(),320)});
+  el.memberEls=[];
+}
+
+function expandTeam(id){
+  const team=TEAMS.find(t=>t.id===id), el=teamEls[id];
+  if(!team||!el)return;
+  el.ball.classList.add('active'); el.bubble.classList.add('show');
+
+  const ballCX=parseFloat(el.ball.dataset.cx), ballCY=parseFloat(el.ball.dataset.cy);
+  const goRight=ballCX<ARENA_W*.55, xSign=goRight?1:-1;
+  const count=team.members.length;
+
+  team.members.forEach((m,i)=>{
+    const yOff=(i-(count-1)/2)*158;
+    const xDist=m.hasPage?180:210;
+    const jitter=xSign*(i%2?24:0);
+    const mx=Math.max(100,Math.min(ARENA_W-250,ballCX+xSign*xDist+jitter));
+    const my=Math.max(60, Math.min(ARENA_H-80, ballCY+yOff));
+
+    const memberEl=m.hasPage?makeCircleMember(m,mx,my,i):makePillMember(m,mx,my,i);
+    arena.appendChild(memberEl);
+    el.memberEls.push(memberEl);
+    setTimeout(()=>memberEl.classList.add('show'),60+i*80);
+  });
+}
+
+function makeCircleMember(m,cx,cy,idx){
+  const canLink=m.hasPage&&PLAYERS[m.id];
+  const el=document.createElement('div');
+  el.className='member-circle'+(canLink?' link':'');
+  el.style.cssText=`left:${cx-60}px;top:${cy-60}px;transition-delay:${idx*.04}s`;
+
+  const av=document.createElement('div'); av.className='mc-avatar';
+  if(canLink){ const g=memberGlowStyle(m.id); if(g) av.style.cssText=g; }
+  if(m.icon){const img=document.createElement('img');img.src=m.icon;img.alt=m.name;av.appendChild(img);}
+  else{const init=document.createElement('span');init.className='mc-initial';init.textContent=m.name[0].toUpperCase();av.appendChild(init);}
+
+  const lbl=document.createElement('div');lbl.className='mc-label';
+  if(ROLES[m.role]){const ri=document.createElement('img');ri.src=ROLES[m.role];ri.alt=m.role;lbl.appendChild(ri);}
+  lbl.appendChild(document.createTextNode(m.name));
+  el.appendChild(av);el.appendChild(lbl);
+  if(canLink) el.addEventListener('click',e=>{e.stopPropagation();openPlayer(m.id);});
+  return el;
+}
+
+function makePillMember(m,cx,cy,idx){
+  const canLink=m.hasPage&&PLAYERS[m.id];
+  const el=document.createElement('div');
+  el.className='member-pill'+(canLink?' link':'');
+  el.style.cssText=`left:${cx-100}px;top:${cy-31}px;transition-delay:${idx*.04}s`;
+  if(ROLES[m.role]){const ri=document.createElement('img');ri.src=ROLES[m.role];ri.alt=m.role;el.appendChild(ri);}
+  el.appendChild(document.createTextNode(m.name));
+  if(canLink) el.addEventListener('click',e=>{e.stopPropagation();openPlayer(m.id);});
+  return el;
+}
+
+// ── Filters ──────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter=btn.dataset.filter;
+    renderTeams();
+    const cx=currentFilter==='main'?MAIN_CENTER.x:ARENA_W/2;
+    const cy=currentFilter==='main'?MAIN_CENTER.y:ARENA_H/2;
+    setTimeout(()=>scrollToCenter(cx,cy),30);
+  });
+});
+
+// ── Zoom ─────────────────────────────────────
+document.getElementById('zoom-slider').addEventListener('input',e=>setZoom(parseFloat(e.target.value)));
+document.getElementById('zoom-out').addEventListener('click',()=>setZoom(currentZoom-.1));
+document.getElementById('zoom-in' ).addEventListener('click',()=>setZoom(currentZoom+.1));
+homeScroll.addEventListener('wheel',e=>{
+  if(!e.ctrlKey&&!e.metaKey)return; e.preventDefault();
+  const r=homeScroll.getBoundingClientRect();
+  setZoom(currentZoom+(e.deltaY>0?-.08:.08),(homeScroll.scrollLeft+e.clientX-r.left)/currentZoom,(homeScroll.scrollTop+e.clientY-r.top)/currentZoom);
+},{passive:false});
+
+// ── Pan (mouse) ───────────────────────────────
+let drag=null;
+homeScroll.addEventListener('mousedown',e=>{if(e.target!==homeScroll&&e.target!==arena)return;drag={x:e.pageX,y:e.pageY,sl:homeScroll.scrollLeft,st:homeScroll.scrollTop};});
+window.addEventListener('mousemove',e=>{if(!drag)return;homeScroll.scrollLeft=drag.sl-(e.pageX-drag.x);homeScroll.scrollTop=drag.st-(e.pageY-drag.y);});
+window.addEventListener('mouseup',()=>{drag=null;});
+
+// ── Pan + pinch (touch) ───────────────────────
+let tp=null,pd=null;
+homeScroll.addEventListener('touchstart',e=>{if(e.touches.length===1){tp={x:e.touches[0].clientX,y:e.touches[0].clientY,sl:homeScroll.scrollLeft,st:homeScroll.scrollTop};pd=null;}else if(e.touches.length===2){tp=null;pd=pinchD(e);}},{passive:true});
+homeScroll.addEventListener('touchmove',e=>{if(e.touches.length===1&&tp){homeScroll.scrollLeft=tp.sl-(e.touches[0].clientX-tp.x);homeScroll.scrollTop=tp.st-(e.touches[0].clientY-tp.y);}else if(e.touches.length===2&&pd!==null){const d=pinchD(e);setZoom(currentZoom*d/pd);pd=d;}},{passive:true});
+homeScroll.addEventListener('touchend',e=>{if(e.touches.length<2)pd=null;if(e.touches.length===0)tp=null;},{passive:true});
+function pinchD(e){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;return Math.hypot(dx,dy);}
+
+// ════════════════════════════════════════════
+//  LIGHTBOX
+// ════════════════════════════════════════════
+function openLightbox(src){
+  document.getElementById('lightbox-img').src=src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+document.getElementById('lightbox-close').addEventListener('click',closeLightbox);
+document.getElementById('lightbox').addEventListener('click',function(e){if(e.target===this)closeLightbox();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+
+// ════════════════════════════════════════════
+//  P2 — PLAYER PAGE
+// ════════════════════════════════════════════
+function openPlayer(pid){
+  const p=PLAYERS[pid];if(!p)return;
+  document.getElementById('page-home').style.display='none';
+  const page=document.getElementById('page-player');
+  page.style.display='block'; page.scrollTop=0;
+  document.getElementById('player-content').innerHTML=buildPlayerCard(p);
+}
+
+function buildPlayerCard(p){
+  if(p.wip){
+    return `<div class="player-card">
+      <div class="p2-header">
+        <div class="p2-left"><div class="p2-player-id">${p.id}（${p.fullName}）</div></div>
+        <div class="p2-right">
+          <div class="p2-icon-badges">
+            ${ROLES[p.role]?`<img src="${ROLES[p.role]}" alt="${p.role}" class="p2-badge-logo">`:''}
+            ${LEAGUE_LOGOS[p.league]?`<img src="${LEAGUE_LOGOS[p.league]}" alt="${p.league}" class="p2-badge-logo">`:''}
+          </div>
+          <div class="p2-player-icon"><span class="p2-initial">${p.id[0]}</span></div>
+        </div>
+      </div>
+      <div class="wip-banner">🚧 施工中 🚧<br>此頁面尚未完成，敬請期待</div>
+    </div>`;
+  }
+
+  const color=PUSH_COLORS[p.pushCategory]||'#ccc';
+  const imgGroupsHTML=p.imageGroups.filter(g=>g.files&&g.files.length>0).map(g=>`
+    <div class="img-group">
+      <div class="img-group-label">${g.label}</div>
+      <div class="img-grid">${g.files.map(f=>`<div class="img-cell" onclick="openLightbox('${f}')"><img src="${f}" alt="${g.label}" loading="lazy"></div>`).join('')}</div>
+    </div>`).join('');
+
+  const cpHTML=p.cp.map(cpId=>{
+    const cpM=findMember(cpId),cpP=PLAYERS[cpId];
+    const link=cpP?' link':'',onclick=cpP?`onclick="openPlayer('${cpId}')"`:'';;
+    const avatar=cpM?.icon?`<img src="${cpM.icon}" alt="${cpId}">`:`<div class="cp-initial">${cpId[0]}</div>`;
+    const roleImg=cpM?`<img src="${ROLES[cpM.role]}" alt="${cpM.role}">`:'';;
+    return `<div class="cp-ball${link}" ${onclick}><div class="cp-avatar">${avatar}</div><div class="cp-name">${roleImg}${cpId}</div></div>`;
+  }).join('');
+
+  return `<div class="player-card">
+    <div class="p2-header">
+      <div class="p2-left">
+        <div class="p2-player-id">${p.id}（${p.fullName}）</div>
+        <div class="speech-bubble">${p.quote}</div>
+        <div class="tags">${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+      <div class="p2-right">
+        <div class="p2-icon-badges">
+          ${ROLES[p.role]?`<img src="${ROLES[p.role]}" alt="${p.role}" class="p2-badge-logo">`:''}
+          ${LEAGUE_LOGOS[p.league]?`<img src="${LEAGUE_LOGOS[p.league]}" alt="${p.league}" class="p2-badge-logo">`:''}
+        </div>
+        <div class="p2-player-icon">${p.icon?`<img src="${p.icon}" alt="${p.id}">`:`<span class="p2-initial">${p.id[0]}</span>`}</div>
+      </div>
+    </div>
+    <div class="section-row">
+      <div class="info-box">
+        <div>我的暱稱：${p.nickname||'—'}</div>
+        <div>生日：${p.birthday||'—'}</div>
+        <div>推度分類：${p.pushCategory?`<span class="push-badge" style="background:${color}">${p.pushCategory}</span>`:'—'}</div>
+        <div>重要程度（1-${p.maxStars} 星）：<span class="stars-text">${renderStars(p.stars,p.maxStars)}</span></div>
+        <div>自由發揮：<ul class="notes-list">${p.notes.map(n=>`<li>${n}</li>`).join('')}</ul></div>
+      </div>
+      <div class="side-label">資訊區</div>
+    </div>
+    ${imgGroupsHTML?`<div class="section-row"><div class="img-section-wrap">${imgGroupsHTML}</div><div class="side-label">圖片區</div></div>`:''}
+    ${p.cp.length?`<div class="cp-section"><div class="cp-title">我嗑的 CP</div><div class="cp-list">${cpHTML}</div></div>`:''}
+  </div>`;
+}
+
+document.getElementById('back-btn').addEventListener('click',()=>{
+  document.getElementById('page-player').style.display='none';
+  document.getElementById('page-home').style.display='block';
+});
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+currentZoom=calcInitZoom();
+arena.style.zoom=currentZoom;
+document.getElementById('zoom-slider').value=currentZoom;
+document.getElementById('zoom-label').textContent=Math.round(currentZoom*100)+'%';
+renderTeams();
+setTimeout(()=>scrollToCenter(MAIN_CENTER.x,MAIN_CENTER.y),50);
+</script>
+</body>
+</html>

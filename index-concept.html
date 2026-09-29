@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Raku's 2026 LCK &amp; LPL</title>
+<title>Raku's 2026 LCK &amp; LPL — Deep Night Concept</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
@@ -197,6 +197,211 @@ body { background:var(--bg); font-family:var(--font); color:var(--text); font-si
 #lightbox-img { max-width:90vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 0 40px rgba(0,0,0,.6); }
 #lightbox-close { position:absolute; top:16px; right:20px; background:none; border:none; color:#fff; font-size:32px; cursor:pointer; line-height:1; opacity:.8; }
 #lightbox-close:hover { opacity:1; }
+
+/* ════════════════════════════════════════════
+   CONCEPT B — 深夜星圖
+   保留原有字體與互動，重做色彩、材質與資訊層級
+   ════════════════════════════════════════════ */
+:root {
+  --bg:#2a2143;
+  --surface:rgba(66,53,88,.90);
+  --surface-strong:#514066;
+  --ball:rgba(126,112,151,.96);
+  --ball-bd:rgba(255,255,255,.36);
+  --pill:rgba(72,58,94,.94);
+  --text:#f7f2ff;
+  --dim:#aea4bf;
+  --accent:#c9b4ff;
+  --lck:#7896ff;
+  --lpl:#ff657b;
+  --other:#c18cff;
+  --hairline:rgba(255,255,255,.12);
+  --deep-shadow:0 24px 70px rgba(0,0,0,.42);
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 30%,rgba(104,126,225,.34),transparent 38%),
+    radial-gradient(circle at 82% 34%,rgba(207,98,137,.25),transparent 35%),
+    radial-gradient(circle at 48% 92%,rgba(167,111,211,.22),transparent 39%),
+    var(--bg);
+}
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(circle at center,transparent 48%,rgba(20,13,34,.30) 100%),
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:auto,64px 64px,64px 64px;
+}
+
+#page-home::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:25;
+  box-shadow:inset 0 0 110px rgba(18,11,31,.22);
+}
+
+#site-masthead {
+  position:fixed; left:24px; top:20px; z-index:31; pointer-events:none;
+  display:grid; gap:3px;
+}
+.site-kicker { color:var(--dim); font-size:12px; letter-spacing:.2em; }
+.site-title { color:#fff; font-size:25px; line-height:1; letter-spacing:.12em; text-shadow:0 0 22px rgba(201,180,255,.24); }
+.site-hint { color:rgba(220,212,234,.54); font-size:12px; letter-spacing:.06em; margin-top:4px; }
+
+#filters {
+  top:18px; right:18px; padding:6px; gap:4px; flex-wrap:nowrap;
+  background:rgba(113,97,132,.90); border:1px solid rgba(255,255,255,.24); border-radius:14px;
+  box-shadow:0 14px 42px rgba(0,0,0,.28); backdrop-filter:blur(14px);
+}
+.filter-btn {
+  min-height:38px; padding:6px 13px; background:transparent;
+  border:1px solid transparent; border-radius:9px; color:#c9c0d7;
+  transition:background .2s,border-color .2s,color .2s,box-shadow .2s;
+}
+.filter-btn:hover { background:rgba(255,255,255,.07); color:#fff; }
+.filter-btn.active { background:rgba(255,255,255,.11); border-color:rgba(255,255,255,.16); color:#fff; }
+.filter-btn[data-filter="LCK"].active { border-color:rgba(120,150,255,.55); box-shadow:inset 0 0 18px rgba(120,150,255,.12); }
+.filter-btn[data-filter="LPL"].active { border-color:rgba(255,101,123,.55); box-shadow:inset 0 0 18px rgba(255,101,123,.12); }
+.filter-btn img { height:24px; filter:drop-shadow(0 0 1px rgba(255,255,255,.7)) drop-shadow(0 2px 6px rgba(0,0,0,.24)); }
+
+#orbit-legend {
+  position:fixed; left:24px; bottom:21px; z-index:31; display:flex; gap:16px;
+  padding:8px 11px; color:rgba(235,228,245,.68); font-size:12px; letter-spacing:.06em;
+  border:1px solid rgba(255,255,255,.16); border-radius:10px; background:rgba(67,53,89,.78); backdrop-filter:blur(12px);
+}
+#orbit-legend span { display:flex; align-items:center; gap:6px; }
+#orbit-legend i { width:7px; height:7px; border-radius:50%; box-shadow:0 0 10px currentColor; }
+#orbit-legend .legend-lck { color:var(--lck); background:var(--lck); }
+#orbit-legend .legend-lpl { color:var(--lpl); background:var(--lpl); }
+#orbit-legend .legend-other { color:var(--other); background:var(--other); }
+
+@keyframes float { 0%,100%{transform:translateY(0) rotate(-.4deg)} 50%{transform:translateY(-9px) rotate(.4deg)} }
+@keyframes orbitPulse { 0%,100%{opacity:.38;transform:scale(.98)} 50%{opacity:.78;transform:scale(1.045)} }
+
+.team-ball {
+  --orb-accent:var(--other); --orb-glow:rgba(193,140,255,.28);
+  background:
+    radial-gradient(circle at 33% 26%,rgba(255,255,255,.22),transparent 38%),
+    var(--ball);
+  border:1px solid color-mix(in srgb,var(--orb-accent) 56%,rgba(255,255,255,.12));
+  box-shadow:0 17px 42px rgba(0,0,0,.32),0 0 30px var(--orb-glow),inset 0 0 28px rgba(255,255,255,.035);
+  transition:box-shadow .25s,border-color .25s,filter .25s;
+}
+.team-ball::before {
+  content:''; position:absolute; inset:-13px; border-radius:50%; pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--orb-accent) 38%,transparent);
+  box-shadow:0 0 22px var(--orb-glow); opacity:.48;
+}
+.team-ball::after {
+  content:''; position:absolute; inset:6px; border-radius:50%; pointer-events:none;
+  border-top:1px solid rgba(255,255,255,.18); border-right:1px solid transparent;
+}
+.team-ball:hover {
+  animation-play-state:paused; transform:scale(1.055);
+  border-color:color-mix(in srgb,var(--orb-accent) 78%,white);
+  box-shadow:0 22px 55px rgba(0,0,0,.42),0 0 46px var(--orb-glow),inset 0 0 30px rgba(255,255,255,.05);
+}
+.team-ball.active {
+  border-color:color-mix(in srgb,var(--orb-accent) 82%,white);
+  box-shadow:0 24px 60px rgba(0,0,0,.46),0 0 56px var(--orb-glow),inset 0 0 32px rgba(255,255,255,.06);
+}
+.team-ball.active::before { animation:orbitPulse 2.4s ease-in-out infinite; }
+.team-ball img { position:relative; z-index:1; width:67%; height:67%; filter:drop-shadow(0 0 1px rgba(255,255,255,.56)) drop-shadow(0 8px 14px rgba(0,0,0,.24)); }
+.team-ball .ball-id { position:relative; z-index:1; }
+.team-ball.ball-other { background:linear-gradient(145deg,rgba(111,94,136,.96),rgba(73,59,95,.97)); border-color:rgba(213,178,255,.52); }
+
+.team-caption {
+  position:absolute; left:50%; top:calc(100% + 18px); transform:translateX(-50%);
+  min-width:max-content; color:#f5efff; font-size:15px; letter-spacing:.16em;
+  text-shadow:0 2px 8px #000,0 0 18px var(--orb-glow); pointer-events:none;
+}
+.team-caption::before { content:''; display:inline-block; width:5px; height:5px; margin:0 8px 2px 0; border-radius:50%; background:var(--orb-accent); box-shadow:0 0 9px var(--orb-accent); }
+
+.quote-bubble {
+  background:rgba(50,38,69,.94); border:1px solid color-mix(in srgb,var(--orb-accent) 52%,rgba(255,255,255,.20));
+  border-radius:11px; padding:10px 14px; box-shadow:0 16px 38px rgba(0,0,0,.35),inset 3px 0 0 var(--orb-accent);
+  backdrop-filter:blur(12px); color:#f6f0ff;
+}
+.quote-bubble:not(.arrow-up)::after { border-top-color:color-mix(in srgb,var(--orb-accent) 52%,#181126); }
+.quote-bubble.arrow-up::after { border-bottom-color:color-mix(in srgb,var(--orb-accent) 52%,#181126); }
+
+.member-circle { gap:8px; }
+.mc-avatar {
+  --orb-accent:var(--other); --orb-glow:rgba(193,140,255,.24);
+  background:linear-gradient(145deg,rgba(139,123,164,.97),rgba(93,76,119,.97));
+  border:1px solid color-mix(in srgb,var(--orb-accent) 60%,rgba(255,255,255,.18));
+  box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 25px var(--orb-glow);
+}
+.member-circle.link:hover .mc-avatar { border-color:color-mix(in srgb,var(--orb-accent) 82%,white); box-shadow:0 18px 42px rgba(0,0,0,.42),0 0 38px var(--orb-glow); }
+.mc-label { font-size:18px; letter-spacing:.035em; text-shadow:0 2px 8px rgba(0,0,0,.9); }
+.mc-label img { opacity:.82; filter:drop-shadow(0 1px 5px rgba(0,0,0,.5)); }
+
+.member-pill {
+  --orb-accent:var(--other); --orb-glow:rgba(193,140,255,.22);
+  background:var(--pill); border:1px solid color-mix(in srgb,var(--orb-accent) 50%,rgba(255,255,255,.15));
+  box-shadow:0 13px 32px rgba(0,0,0,.30),0 0 22px var(--orb-glow); backdrop-filter:blur(10px);
+}
+.member-pill.link:hover { background:rgba(50,38,68,.96); border-color:color-mix(in srgb,var(--orb-accent) 82%,white); }
+
+#zoom-ctrl {
+  bottom:18px; right:18px; padding:7px 11px; background:rgba(67,53,89,.84);
+  border:1px solid var(--hairline); border-radius:12px; box-shadow:0 14px 42px rgba(0,0,0,.28); backdrop-filter:blur(14px);
+}
+#zoom-slider { accent-color:var(--accent); }
+
+#page-player {
+  padding:22px 22px 64px;
+  background:
+    radial-gradient(circle at 18% 16%,rgba(104,126,225,.30),transparent 38%),
+    radial-gradient(circle at 82% 30%,rgba(207,98,137,.22),transparent 34%),
+    #2a2143;
+}
+.back-btn {
+  position:sticky; top:0; z-index:10; margin-bottom:20px; padding:9px 15px;
+  background:rgba(67,53,89,.84); border:1px solid rgba(255,255,255,.17); border-radius:10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.25); backdrop-filter:blur(14px);
+}
+.back-btn:hover { background:rgba(255,255,255,.09); }
+.player-card {
+  max-width:880px; padding:34px; border-radius:24px;
+  background:linear-gradient(145deg,rgba(69,55,91,.96),rgba(47,36,66,.97));
+  border:1px solid var(--hairline); box-shadow:var(--deep-shadow),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.p2-header { align-items:center; margin-bottom:20px; padding-bottom:24px; border-bottom:1px solid var(--hairline); }
+.p2-player-id { font-size:38px; letter-spacing:.055em; margin-bottom:16px; }
+.p2-player-icon { width:132px; height:132px; background:var(--surface-strong); border:1px solid rgba(201,180,255,.5); box-shadow:0 18px 42px rgba(0,0,0,.36),0 0 28px rgba(201,180,255,.16); }
+.p2-badge-logo { height:25px; filter:drop-shadow(0 4px 9px rgba(0,0,0,.34)); }
+.speech-bubble { background:rgba(48,36,67,.86); border:1px solid rgba(221,206,255,.38); box-shadow:0 12px 28px rgba(0,0,0,.22); }
+.speech-bubble::after { border-left-color:rgba(201,180,255,.42); }
+.tags { gap:8px; }
+.tag { background:rgba(255,255,255,.055); border:1px solid var(--hairline); color:#d8cfe7; padding:5px 13px; }
+.section-row { gap:12px; margin-bottom:24px; }
+.side-label { color:#82778f; letter-spacing:4px; }
+.info-box { background:rgba(36,27,51,.42); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:17px 18px; }
+.notes-list li { color:#c3b9d2; }
+.img-group-label { color:#d8c7ff; border-left-color:#9d7ee9; }
+.img-grid { gap:10px; }
+.img-cell { height:235px; background:#100b1c; border:1px solid var(--hairline); border-radius:10px; }
+.img-cell:hover { border-color:rgba(201,180,255,.62); box-shadow:0 10px 30px rgba(0,0,0,.3); }
+.cp-avatar { background:#171023; border:1px solid rgba(201,180,255,.35); box-shadow:0 10px 25px rgba(0,0,0,.28); }
+.cp-ball.link:hover .cp-avatar { border-color:#c9b4ff; }
+.wip-banner { background:rgba(7,5,13,.25); border:1px dashed rgba(201,180,255,.28); }
+
+#lightbox { background:rgba(5,3,9,.92); backdrop-filter:blur(12px); }
+
+@media(max-width:700px){
+  #site-masthead{left:12px;top:11px}
+  .site-kicker{font-size:10px}.site-title{font-size:18px}.site-hint{display:none}
+  #filters{top:58px;left:8px;right:8px;overflow-x:auto;justify-content:flex-start}
+  #orbit-legend{display:none}
+  .filter-btn{min-height:34px;padding:5px 10px}
+  #zoom-ctrl{bottom:10px;right:10px}
+  #page-player{padding:14px 12px 44px}
+  .player-card{padding:22px 16px;border-radius:18px}
+  .p2-header{align-items:flex-start}.p2-player-id{font-size:30px}
+  .p2-player-icon{width:104px;height:104px}
+  .img-cell{height:180px}
+}
 </style>
 </head>
 <body>
@@ -204,6 +409,11 @@ body { background:var(--bg); font-family:var(--font); color:var(--text); font-si
 <canvas id="stars"></canvas>
 
 <div id="page-home" class="page">
+  <div id="site-masthead">
+    <div class="site-kicker">2026 SCOUTING ORBIT</div>
+    <div class="site-title">LCK × LPL</div>
+    <div class="site-hint">拖曳星圖 · 點擊隊伍展開名單</div>
+  </div>
   <div id="filters">
     <button class="filter-btn" data-filter="all">全部</button>
     <button class="filter-btn active" data-filter="main">主隊</button>
@@ -212,6 +422,11 @@ body { background:var(--bg); font-family:var(--font); color:var(--text); font-si
     <button class="filter-btn" data-filter="LPL"><img src="Logo/LPL.png" alt="LPL"></button>
   </div>
   <div id="home-scroll"><div id="arena"></div></div>
+  <div id="orbit-legend">
+    <span><i class="legend-lck"></i>LCK 冷藍</span>
+    <span><i class="legend-lpl"></i>LPL 暖紅</span>
+    <span><i class="legend-other"></i>其他關注</span>
+  </div>
   <div id="zoom-ctrl">
     <button id="zoom-out">−</button>
     <input type="range" id="zoom-slider" min="0.2" max="1.2" step="0.05" value="0.65">
@@ -831,11 +1046,15 @@ const PLAYERS = {
   const c=document.getElementById('stars'), ctx=c.getContext('2d'); let s=[];
   function resize(){
     c.width=innerWidth; c.height=innerHeight;
-    s=Array.from({length:150},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.4+.3,a:Math.random()*.45+.15,sp:Math.random()*.0008+.0003,ph:Math.random()*Math.PI*2}));
+    s=Array.from({length:190},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.35+.25,a:Math.random()*.42+.12,sp:Math.random()*.00075+.00025,ph:Math.random()*Math.PI*2,tone:Math.random()}));
   }
   function draw(t){
     ctx.clearRect(0,0,c.width,c.height);
-    s.forEach(s=>{const a=s.a+Math.sin(t*s.sp*1000+s.ph)*.12;ctx.beginPath();ctx.arc(s.x*c.width,s.y*c.height,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(210,195,255,${Math.max(.05,a)})`;ctx.fill()});
+    s.forEach(s=>{
+      const a=Math.max(.04,s.a+Math.sin(t*s.sp*1000+s.ph)*.11);
+      const rgb=s.tone<.12?'120,150,255':s.tone>.9?'255,112,135':'220,207,246';
+      ctx.beginPath();ctx.arc(s.x*c.width,s.y*c.height,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(${rgb},${a})`;ctx.fill();
+    });
     requestAnimationFrame(draw);
   }
   addEventListener('resize',resize); resize(); requestAnimationFrame(draw);
@@ -846,12 +1065,24 @@ const PLAYERS = {
 // ════════════════════════════════════════════
 function getBallSize(team){ return BALL_SIZE[team.importance]||155; }
 
+function leagueVisual(league){
+  if(league==='LCK') return {accent:'#7896ff',glow:'rgba(120,150,255,.28)'};
+  if(league==='LPL') return {accent:'#ff657b',glow:'rgba(255,101,123,.27)'};
+  return {accent:'#c18cff',glow:'rgba(193,140,255,.25)'};
+}
+
+function applyOrbAccent(el,league){
+  const v=leagueVisual(league);
+  el.style.setProperty('--orb-accent',v.accent);
+  el.style.setProperty('--orb-glow',v.glow);
+}
+
 function seededFloat(seed){ const x=Math.sin(seed*127.1+311.7)*43758.5453; return x-Math.floor(x); }
 
 function memberGlowStyle(pid){
   const p=PLAYERS[pid]; if(!p||!p.stars) return '';
   const r=p.stars/p.maxStars;
-  return `box-shadow:0 0 ${(4+r*12).toFixed(0)}px ${(r*5).toFixed(0)}px rgba(200,160,255,${(.1+r*.55).toFixed(2)})`;
+  return `box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 ${(14+r*24).toFixed(0)}px ${(r*2).toFixed(0)}px var(--orb-glow)`;
 }
 
 function renderStars(stars,maxStars){
@@ -937,10 +1168,12 @@ function renderTeams(){
     const ball=document.createElement('div');
     ball.className='team-ball'+(isOther?' ball-other':'');
     ball.style.cssText=`left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;animation-delay:${delay}`;
+    applyOrbAccent(ball,team.league);
     ball.dataset.cx=cx; ball.dataset.cy=cy;
 
     if(team.logo){const img=document.createElement('img');img.src=team.logo;img.alt=team.name;ball.appendChild(img);}
     else{const sp=document.createElement('span');sp.className='ball-id';sp.textContent=isOther?'other':team.id;ball.appendChild(sp);}
+    const caption=document.createElement('span');caption.className='team-caption';caption.textContent=isOther?'ARCHIVE':team.id;ball.appendChild(caption);
     ball.addEventListener('click',()=>toggleTeam(team.id));
     arena.appendChild(ball);
 
@@ -949,6 +1182,7 @@ function renderTeams(){
     bubble.className='quote-bubble'+(aboveBall?'':' arrow-up');
     bubble.textContent=team.quote||team.name;
     bubble.style.cssText=`left:${x}px;top:${aboveBall?y-95:y+sz+14}px`;
+    applyOrbAccent(bubble,team.league);
     arena.appendChild(bubble);
 
     teamEls[team.id]={ball,bubble,memberEls:[]};
@@ -984,6 +1218,7 @@ function expandTeam(id){
     const my=Math.max(60, Math.min(ARENA_H-80, ballCY+yOff));
 
     const memberEl=m.hasPage?makeCircleMember(m,mx,my,i):makePillMember(m,mx,my,i);
+    applyOrbAccent(memberEl,team.league);
     arena.appendChild(memberEl);
     el.memberEls.push(memberEl);
     setTimeout(()=>memberEl.classList.add('show'),60+i*80);
